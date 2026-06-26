@@ -101,3 +101,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def main():
+    # --- TEST SATIRI (Bağlantıyı kontrol etmek için ekledik) ---
+    send_telegram("🚀 GitHub ve Telegram bağlantısı BAŞARILI! Bot çalışıyor.")
+    # ----------------------------------------------------------
+    
+    seen = load_seen()
+    ilk_calisma = len(seen) == 0
+    toplam_yeni = 0
