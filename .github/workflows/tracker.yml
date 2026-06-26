@@ -1,0 +1,26 @@
+name: Araba Takip Botu
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # Her 5 dakikada bir çalışır
+  workflow_dispatch:          # İstediğimizde elle başlatmak için
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Paketleri yükle
+        run: pip install requests beautifulsoup4
+
+      - name: Botu çalıştır
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python tracker.py
