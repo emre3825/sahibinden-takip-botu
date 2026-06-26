@@ -8,7 +8,6 @@ import random
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-# Takip edilecek tüm Sahibinden linklerini bir liste haline getirdik
 SEARCH_URLS = [
     "https://www.sahibinden.com/hyundai-accent-blue?a5_min=2016&price_max=380000&sorting=date_desc#!",
     "https://www.sahibinden.com/renault-symbol?a5_min=2016&price_max=320000&sorting=date_desc",
@@ -17,15 +16,28 @@ SEARCH_URLS = [
 
 SEEN_FILE = "/tmp/seen_ids.json"
 
-HEADERS_LIST = [
-    {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"},
-    {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15"},
-    {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0"},
-]
+# Sahibinden engelini aşmak için çok daha detaylı tarayıcı taklidi (Headers)
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0"
+}
 
 def send_telegram(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"})
+    try:
+        r = requests.post(url, json={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}, timeout=10)
+        print(f"Telegram Yanıtı: {r.status_code}")
+    except Exception as e:
+        print(f"Telegram gönderim hatası: {e}")
 
 def load_seen():
     if os.path.exists(SEEN_FILE):
@@ -38,17 +50,13 @@ def save_seen(seen):
         json.dump(list(seen), f)
 
 def fetch_listings(url):
-    headers = random.choice(HEADERS_LIST)
-    headers["Accept-Language"] = "tr-TR,tr;q=0.9"
-    headers["Referer"] = "https://www.sahibinden.com/"
-    
-    time.sleep(random.uniform(2, 4))
-    
+    time.sleep(random.uniform(3, 6)) # Engeli yememek için bekleme süresini artırdık
     session = requests.Session()
     try:
-        resp = session.get(url, headers=headers, timeout=15)
+        resp = session.get(url, headers=HEADERS, timeout=15)
+        print(f"Site Yanıt Kodu: {resp.status_code} ({url.split('/')[-1].split('?')[0]})")
+        
         if resp.status_code != 200:
-            print(f"Hata ({resp.status_code}): {url} adresi çekilemedi.")
             return []
         
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -73,13 +81,16 @@ def fetch_listings(url):
         return []
 
 def main():
+    # Güvenlik testi: Kod başlar başlamaz Telegram bağlantısını hemen denetleyecek
+    send_telegram("🚀 Bot taranıyor... Telegram bağlantısı aktif!")
+    
     seen = load_seen()
     ilk_calisma = len(seen) == 0
     toplam_yeni = 0
     
     for index, url_link in enumerate(SEARCH_URLS, 1):
-        print(f"🔄 {index}. Link taranıyor...")
         listings = fetch_listings(url_link)
+        print(f"Bulunan ilan sayısı: {len(listings)}")
         
         for item in listings:
             if item["id"] and item["id"] not in seen:
@@ -101,12 +112,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-def main():
-    # --- TEST SATIRI (Bağlantıyı kontrol etmek için ekledik) ---
-    send_telegram("🚀 GitHub ve Telegram bağlantısı BAŞARILI! Bot çalışıyor.")
-    # ----------------------------------------------------------
-    
-    seen = load_seen()
-    ilk_calisma = len(seen) == 0
-    toplam_yeni = 0
